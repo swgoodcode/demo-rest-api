@@ -2,6 +2,7 @@ package com.swgoodcode.demorestapi.events;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swgoodcode.demorestapi.common.TestDescription;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.Test;
@@ -37,15 +38,52 @@ public class EventControllerTest {
     ObjectMapper objectMapper;
 
     @Test
-    public void createEvent() throws Exception {
-        Event event = Event.builder()
+    @TestDescription("입력 값이 잘못된 경우에 에러가 발생하는 테스트")
+    public void createEventBadRequestWrongInput() throws Exception {
+        EventDto eventDto = EventDto.builder()
                 .name("Sring")
                 .description("REST API Devel with Spring")
                 .beginEnrollmentDateTime(LocalDateTime.of(2018, 11, 23, 14, 21))
                 .closeEnrollmentDateTime(LocalDateTime.of(2018, 11, 24, 14, 21))
                 .beginEventDateTime(LocalDateTime.of(2018, 11, 25, 14,22))
-                .endEventDateTime(LocalDateTime.of(2018, 11, 26, 14,23))
-                .basePrice(100)
+                .endEventDateTime(LocalDateTime.of(2018, 11, 23, 14,23))
+                .basePrice(10000)
+                .maxPrice(200)
+                .limitOfEnrollment(100)
+                .location("강남역 D2 스타텁 팩토리")
+                .build();
+        this.mockMvc.perform(post("/api/events")
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(this.objectMapper.writeValueAsString(eventDto)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$[0].objectName").exists())
+                .andExpect(jsonPath("$[0].defaultMessage").exists())
+                .andExpect(jsonPath("$[0].code").exists())
+        ;
+    }
+
+    @Test
+    @TestDescription("입력 값이 비어있는 경우에 에러가 발생하는 테스트")
+    public void createEventBadRequestEmptyInput() throws Exception {
+        EventDto eventDto = EventDto.builder().build();
+        this.mockMvc.perform(post("/api/events")
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(this.objectMapper.writeValueAsString(eventDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void createEventBadRequest() throws Exception {
+        Event event = Event.builder()
+                .id(100)
+                .name("Sring")
+                .description("REST API Devel with Spring")
+                .beginEnrollmentDateTime(LocalDateTime.of(2018, 11, 23, 14, 21))
+                .closeEnrollmentDateTime(LocalDateTime.of(2018, 11, 24, 14, 21))
+                .beginEventDateTime(LocalDateTime.of(2018, 11, 25, 14,22))
+                .endEventDateTime(LocalDateTime.of(2018, 11, 23, 14,23))
+                .basePrice(10000)
                 .maxPrice(200)
                 .limitOfEnrollment(100)
                 .location("강남역 D2 스타텁 팩토리")
@@ -56,15 +94,43 @@ public class EventControllerTest {
 
 
         mockMvc.perform(post("/api/events/")
+                .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE)
+                .accept(MediaTypes.HAL_JSON)
+                .content(objectMapper.writeValueAsBytes(event)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+        ;
+    }
+
+
+    @Test
+    @TestDescription("입력 받을 수 없는 값이 사용한 경우에 에러가 발생하는 테스트")
+    public void createEvent() throws Exception {
+        EventDto event = EventDto.builder()
+                .name("Sring")
+                .description("REST API Devel with Spring")
+                .beginEnrollmentDateTime(LocalDateTime.of(2018, 11, 23, 14, 21))
+                .closeEnrollmentDateTime(LocalDateTime.of(2018, 11, 24, 14, 21))
+                .beginEventDateTime(LocalDateTime.of(2018, 11, 25, 14,22))
+                .endEventDateTime(LocalDateTime.of(2018, 11, 26, 14,23))
+                .basePrice(100)
+                .maxPrice(200)
+                .limitOfEnrollment(100)
+                .location("강남역 D2 스타텁 팩토리")
+                .build();
+
+
+        mockMvc.perform(post("/api/events/")
                     .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE)
                     .accept(MediaTypes.HAL_JSON)
                     .content(objectMapper.writeValueAsBytes(event)))
                 .andDo(print())
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("id").exists())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE))
-                .andExpect(jsonPath("id").value(Matchers.not(100)))
-                .andExpect(jsonPath("free").value(Matchers.not(true)))
+                .andExpect(jsonPath("free").value(false))
+                .andExpect(jsonPath("offline").value(true))
                 .andExpect(jsonPath("eventStatus").value(EventStatus.DRAFT.name()))
         ;
     }
